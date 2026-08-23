@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kris3DLab — Grafikai Munkák</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root{
+    --bg: #07090a;
+    --bg-panel: #0d1312;
+    --bg-panel-2:#0f1a17;
+    --line: #1c2926;
+    --line-soft:#131c1a;
+    --green: #63FFB6;
+    --green-dim: #2b6b52;
+    --ink: #eef8f2;
+    --ink-dim: #7e9389;
+    --mono: 'JetBrains Mono', monospace;
+    --disp: 'Space Grotesk', sans-serif;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  ::selection{ background:var(--green); color:#04140d; }
+
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--disp);
+    overflow-x:hidden;
+  }
+
+  .grid-bg{
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size:46px 46px;
+    z-index:0;
+    mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, black 30%, transparent 85%);
+  }
+
+  .noise-vignette{
+    position:fixed; inset:0; z-index:1; pointer-events:none;
+    background: radial-gradient(ellipse 90% 70% at 50% 0%, transparent 40%, rgba(0,0,0,.55) 100%);
+  }
+
+  .scanline{
+    position:fixed; inset:0; z-index:6; pointer-events:none;
+    background: repeating-linear-gradient(0deg, rgba(99,255,182,0.02) 0px, rgba(99,255,182,0.02) 1px, transparent 1px, transparent 3px);
+    mix-blend-mode: overlay;
+  }
+
+  nav{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 8vw;
+    background:rgba(7,9,10,.75);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  nav .logo{
+    font-family:var(--mono); font-weight:700; font-size:14px;
+    letter-spacing:.04em;
+  }
+  nav .logo span{ color:var(--green); }
+  nav .links{
+    display:flex; gap:32px;
+    font-family:var(--mono); font-size:12.5px; color:var(--ink-dim);
+    letter-spacing:.04em;
+  }
+  nav .links a{ color:inherit; text-decoration:none; transition:color .2s; }
+  nav .links a:hover{ color:var(--green); }
+  @media(max-width:700px){ nav .links{ display:none; } }
+
+  header{
+    position:relative; z-index:2;
+    padding:100px 8vw 70px;
+    max-width:1280px; margin:0 auto;
+    display:grid;
+    grid-template-columns:1.1fr .9fr;
+    gap:60px;
+    align-items:center;
+  }
+
+  .tag{
+    font-family:var(--mono);
+    font-size:11.5px;
+    letter-spacing:.22em;
+    color:var(--green);
+    text-transform:uppercase;
+    display:inline-flex; align-items:center; gap:10px;
+    margin-bottom:26px;
+    border:1px solid var(--green-dim);
+    padding:6px 12px 6px 10px;
+    border-radius:100px;
+  }
+  .tag::before{
+    content:'';
+    width:6px;height:6px;border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 8px var(--green);
+    animation:blink 1.8s infinite;
+  }
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+  h1{
+    font-size:clamp(42px, 6vw, 82px);
+    font-weight:700;
+    line-height:.98;
+    letter-spacing:-.025em;
+  }
+  h1 .fill{ color: var(--ink); }
+  h1 .accent{
+    color: var(--green);
+    text-shadow:0 0 26px rgba(99,255,182,.35);
+  }
+  h1 .outline{ -webkit-text-stroke:1.4px var(--ink-dim); color:transparent; }
+
+  .lede{
+    margin-top:26px;
+    max-width:520px;
+    font-size:16.5px;
+    line-height:1.7;
+    color:var(--ink-dim);
+  }
+  .lede strong{ color:var(--ink); font-weight:600; }
+
+  .terminal{
+    margin-top:38px;
+    font-family:var(--mono);
+    font-size:12.5px;
+    border:1px solid var(--line);
+    background:var(--bg-panel);
+    max-width:500px;
+    border-radius:8px;
+    overflow:hidden;
+  }
+  .terminal .bar{
+    display:flex; gap:6px;
+    padding:10px 14px;
+    border-bottom:1px solid var(--line);
+    background:var(--bg-panel-2);
+  }
+  .terminal .bar i{ width:8px;height:8px;border-radius:50%; background:var(--line); display:block; }
+  .terminal .body{ padding:16px 18px; }
+  .terminal .row{ display:flex; gap:10px; margin-bottom:7px; }
+  .terminal .row:last-child{margin-bottom:0;}
+  .terminal .k{ color:var(--ink-dim); min-width:96px; }
+  .terminal .v{ color:var(--green); }
+
+  .hero-feature{
+    position:relative;
+    border:1px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+    background:var(--bg-panel);
+    aspect-ratio:16/9;
+  }
+  .hero-feature img{
+    width:100%; height:100%; object-fit:cover; display:block;
+    animation:featureFade 1.1s ease;
+  }
+  @keyframes featureFade{ from{opacity:0; transform:scale(1.03);} to{opacity:1; transform:scale(1);} }
+  .hero-feature::after{
+    content:'';
+    position:absolute; inset:0;
+    background:linear-gradient(180deg, transparent 55%, rgba(7,9,10,.85) 100%);
+  }
+  .hero-feature .cap{
+    position:absolute; left:16px; bottom:14px; z-index:2;
+    font-family:var(--mono); font-size:11.5px; color:var(--green);
+    letter-spacing:.05em;
+    display:flex; align-items:center; gap:8px;
+  }
+  .hero-feature .cap::before{ content:'▸'; }
+  .hero-feature .corner{
+    position:absolute; width:20px; height:20px; z-index:2;
+    border-color:var(--green); opacity:.85;
+  }
+  .hero-feature .corner.tl{ top:12px; left:12px; border-top:2px solid; border-left:2px solid; }
+  .hero-feature .corner.br{ bottom:12px; right:12px; border-bottom:2px solid; border-right:2px solid; }
+
+  @media(max-width:900px){
+    header{ grid-template-columns:1fr; padding:90px 6vw 50px; gap:40px; }
+  }
+
+  .section-head{
+    max-width:1280px; margin:0 auto;
+    padding:0 8vw;
+    display:flex; align-items:baseline; gap:16px;
+    margin-bottom:40px;
+  }
+  .section-head .num{
+    font-family:var(--mono); font-size:12.5px; color:var(--green-dim);
+  }
+  .section-head h2{
+    font-size:28px; font-weight:600; letter-spacing:-.01em;
+  }
+  .section-head .rule{
+    flex:1; height:1px;
+    background:linear-gradient(90deg, var(--line), transparent);
+  }
+
+  section{ position:relative; z-index:2; padding:50px 0 100px; }
+
+  .gallery{
+    max-width:1280px; margin:0 auto;
+    padding:0 8vw;
+    columns: 3 280px;
+    column-gap:22px;
+  }
+  .piece{
+    position:relative;
+    border:1px solid var(--line);
+    background:var(--bg-panel);
+    border-radius:10px;
+    overflow:hidden;
+    break-inside:avoid;
+    margin-bottom:22px;
+    transition:border-color .3s ease, transform .3s ease, box-shadow .3s ease;
+  }
+  .piece:hover{
+    border-color:var(--green-dim);
+    transform:translateY(-5px);
+    box-shadow:0 18px 34px -18px rgba(0,0,0,.6);
+  }
+  .piece .frame{
+    position:relative;
+    overflow:hidden;
+    background:#050706;
+    display:block;
+    line-height:0;
+  }
+  .piece img{
+    width:100%; height:auto; display:block;
+    filter:saturate(1.03);
+    transition:transform .6s cubic-bezier(.2,.7,.2,1);
+  }
+  .piece:hover img{ transform:scale(1.035); }
+
+  .piece .scan-overlay{
+    position:absolute; inset:0;
+    background:linear-gradient(180deg, transparent 55%, rgba(99,255,182,.10) 100%);
+    opacity:0;
+    transition:opacity .3s ease;
+    pointer-events:none;
+  }
+  .piece:hover .scan-overlay{ opacity:1; }
+
+  .piece .idx-badge{
+    position:absolute; top:10px; right:10px; z-index:3;
+    font-family:var(--mono); font-size:10.5px; color:var(--green);
+    background:rgba(7,9,10,.72);
+    border:1px solid var(--green-dim);
+    padding:3px 8px; border-radius:100px;
+    opacity:0; transform:translateY(-4px);
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  .piece:hover .idx-badge{ opacity:1; transform:translateY(0); }
+
+  .piece .meta{
+    padding:14px 16px 15px;
+  }
+  .piece .meta .title{
+    font-size:13.5px; font-weight:500; color:var(--ink);
+    display:block;
+  }
+  .piece .meta .kind{
+    font-family:var(--mono); font-size:10.5px; color:var(--ink-dim);
+    margin-top:3px; display:block; letter-spacing:.04em;
+  }
+
+  @media(max-width:700px){
+    .gallery{ columns:1 100%; padding:0 6vw; }
+    header{ padding:90px 6vw 50px; }
+    .section-head{ padding:0 6vw; }
+  }
+
+  .strip{
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    padding:30px 0;
+    overflow:hidden;
+    background:var(--bg-panel);
+  }
+  .strip-track{
+    display:flex; gap:56px;
+    font-family:var(--mono);
+    font-size:13.5px;
+    color:var(--ink-dim);
+    letter-spacing:.06em;
+    white-space:nowrap;
+    animation:scroll 30s linear infinite;
+    width:max-content;
+  }
+  .strip-track span{ color:var(--green); }
+  @keyframes scroll{
+    from{ transform:translateX(0); }
+    to{ transform:translateX(-50%); }
+  }
+
+  .about{
+    max-width:1280px; margin:0 auto; padding:0 8vw;
+    display:grid; grid-template-columns:1.1fr .9fr; gap:64px;
+  }
+  .about p{
+    font-size:15.5px; line-height:1.8; color:var(--ink-dim); margin-bottom:18px;
+  }
+  .about p strong{ color:var(--ink); font-weight:600; }
+  .stack-list{
+    border:1px solid var(--line);
+    background:var(--bg-panel);
+    border-radius:10px;
+    padding:8px 26px;
+    height:fit-content;
+  }
+  .stack-list .row2{
+    display:flex; justify-content:space-between;
+    padding:14px 0;
+    border-bottom:1px solid var(--line-soft);
+    font-size:13.5px;
+  }
+  .stack-list .row2:last-child{ border-bottom:none; }
+  .stack-list .row2 .l{ color:var(--ink-dim); }
+  .stack-list .row2 .r{ color:var(--green); font-family:var(--mono); font-size:12.5px; text-align:right; }
+
+  @media(max-width:800px){
+    .about{ grid-template-columns:1fr; padding:0 6vw; gap:36px; }
+  }
+
+  footer{
+    position:relative; z-index:2;
+    padding:56px 8vw 46px;
+    max-width:1280px; margin:0 auto;
+    display:flex; justify-content:space-between; align-items:center;
+    border-top:1px solid var(--line);
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--ink-dim);
+  }
+  footer .brand{ color:var(--green); }
+  @media(max-width:560px){
+    footer{ flex-direction:column; gap:10px; text-align:center; padding:46px 6vw; }
+  }
+
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity .6s ease, transform .6s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="noise-vignette"></div>
+<div class="scanline"></div>
+
+<nav>
+  <div class="logo">KRIS<span>3D</span>LAB</div>
+  <div class="links">
+    <a href="#work">Munkák</a>
+    <a href="#about">Rólam</a>
+    <a href="#contact">Kapcsolat</a>
+  </div>
+</nav>
+
+<header>
+  <div>
+    <div class="tag">status: aktívan alkot</div>
+    <h1>
+      <span class="fill">KRIS</span><span class="accent">3D</span><span class="fill">LAB</span><br>
+      <span class="outline">GRAFIKAI</span><br>
+      <span class="fill">MUNKÁK</span>
+    </h1>
+    <p class="lede">
+  <strong>Kris3DLab vagyok</strong>, és főként Roblox- és Minecraft-projektekhez készítek
+  thumbnail-eket, logókat, karaktergrafikákat és promóciós anyagokat.
+  Ha megtetszett valamelyik munkám, <strong>megbízást is vállalok.</strong>
+</p>
+<div class="terminal">
+  <div class="bar"><i></i><i></i><i></i></div>
+  <div class="body">
+    <div class="row"><span class="k">// eszköz</span><span class="v">Photopea</span></div>
+    <div class="row"><span class="k">// fókusz</span><span class="v">Roblox · Minecraft</span></div>
+    <div class="row"><span class="k">// státusz</span><span class="v">Megbízások elérhetők</span></div>
+  </div>
+</div>
+  </div>
+  <div class="hero-feature">
+    <div class="corner tl"></div>
+    <div class="corner br"></div>
+    <img src="images/magyarroblox.png" alt="Magyar Roblox — kiemelt munka">
+    <div class="cap">kiemelt munka — Magyar Roblox</div>
+  </div>
+</header>
+
+<section id="work">
+  <div class="section-head">
+    <span class="num">01</span>
+    <h2>Válogatott munkák</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="gallery">
+
+    <div class="piece reveal">
+      <div class="frame"><span class="idx-badge">01</span><img src="images/magyarroblox.png" alt="Magyar Roblox"><div class="scan-overlay"></div></div>
+      <div class="meta"><span class="title">Magyar Roblox</span><span class="kind">Thumbnail</span></div>
+    </div>
+
+    <div class="piece reveal">
+      <div class="frame"><span class="idx-badge">02</span><img src="images/eduscho.png" alt="Eduscho reklámgrafika"><div class="scan-overlay"></div></div>
+      <div class="meta"><span class="title">Eduscho — reklámgrafika</span><span class="kind">Hirdetés</span></div>
+    </div>
+
+    <div class="piece reveal">
+      <div class="frame"><span class="idx-badge">03</span><img src="images/robloxrossz.png" alt="A Roblox rossz lett?"><div class="scan-overlay"></div></div>
+      <div class="meta"><span class="title">A Roblox ROSSZ lett?</span><span class="kind">Thumbnail</span></div>
+    </div>
+
+    <div class="piece reveal">
+      <div class="frame"><span class="idx-badge">04</span><img src="images/avatar.png" alt="Karakter avatar"><div class="scan-overlay"></div></div>
+      <div class="meta"><span class="title">Karakter — avatar grafika</span><span class="kind">Profilkép</span></div>
+    </div>
+
+    <div class="piece reveal">
+      <div class="frame"><span class="idx-badge">05</span><img src="images/steal1.png" alt="Steal a Magyar Youtuber I"><div class="scan-overlay"></div></div>
+      <div class="meta"><span class="title">Steal a Magyar Youtuber — I.</span><span class="kind">Thumbnail · sorozat</span></div>
+    </div>
+
+    <div class="piece reveal">
+      <div class="frame"><span class="idx-badge">06</span><img src="images/steal2.png" alt="Steal a Magyar Youtuber cartoon"><div class="scan-overlay"></div></div>
+      <div class="meta"><span class="title">Steal a Magyar Youtuber — II.</span><span class="kind">Thumbnail · sorozat</span></div>
+    </div>
+
+    <div class="piece reveal">
+      <div class="frame"><span class="idx-badge">07</span><img src="images/steal3.png" alt="Steal a Magyar Youtuber in-game"><div class="scan-overlay"></div></div>
+      <div class="meta"><span class="title">Steal a Magyar Youtuber — III.</span><span class="kind">Thumbnail · sorozat</span></div>
+    </div>
+
+    <div class="piece reveal">
+      <div class="frame"><span class="idx-badge">08</span><img src="images/xytarx.png" alt="Happy Birthday Xytrax"><div class="scan-overlay"></div></div>
+      <div class="meta"><span class="title">Happy Birthday — Xytrax</span><span class="kind">Ajándékgrafika</span></div>
+    </div>
+
+    <div class="piece reveal">
+      <div class="frame"><span class="idx-badge">09</span><img src="images/iratkozz.png" alt="Iratkozz fel gomb grafika"><div class="scan-overlay"></div></div>
+      <div class="meta"><span class="title">Iratkozz fel — CTA grafika</span><span class="kind">Branding elem</span></div>
+    </div>
+
+  </div>
+</section>
+
+<div class="strip">
+  <div class="strip-track">
+    <span>THUMBNAIL DESIGN</span> · BRANDING · <span>3D MONTÁZS</span> · RÉTEGMASZKOLÁS · <span>FÉNYEFFEKTEK</span> · KOMPOZÍCIÓ · <span>PHOTOPEA</span> · KARAKTERTERVEZÉS · <span>THUMBNAIL DESIGN</span> · BRANDING · <span>3D MONTÁZS</span> · RÉTEGMASZKOLÁS · <span>FÉNYEFFEKTEK</span> · KOMPOZÍCIÓ · <span>PHOTOPEA</span> · KARAKTERTERVEZÉS ·
+  </div>
+</div>
+
+<section id="about">
+  <div class="section-head" style="margin-top:60px;">
+    <span class="num">02</span>
+    <h2>Rólam</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div class="about">
+    <div>
+      <p>
+        <strong>Sziasztok! Kris3DLab vagyok.</strong> Ezen az oldalon az általam
+        készített grafikai munkákat találjátok, főként Roblox- és Minecraft-projektekhez.
+      </p>
+
+      <p>
+        Thumbnail-eket, logókat, karaktergrafikákat és promóciós anyagokat készítek.
+        Szeretek többféle stílussal kísérletezni, ezért minden munkát az adott
+        projekthez és annak hangulatához igazítok.
+      </p>
+
+      <p>
+        A legtöbb munkám <strong>Photopeában</strong> készül, réteges kompozíciókkal,
+        maszkolással, fény- és kontraszteffektekkel. Ha hasonló grafikára van szükséged,
+        <strong>megbízást is vállalok.</strong>
+      </p>
+    </div>
+
+    <div class="stack-list">
+      <div class="row2">
+        <span class="l">Fő eszköz</span>
+        <span class="r">Photopea</span>
+      </div>
+
+      <div class="row2">
+        <span class="l">Fókusz</span>
+        <span class="r">Roblox / Minecraft</span>
+      </div>
+
+      <div class="row2">
+        <span class="l">Szolgáltatások</span>
+        <span class="r">Thumbnail · Logó · Grafika</span>
+      </div>
+
+      <div class="row2">
+        <span class="l">Megbízások</span>
+        <span class="r">Elérhetők</span>
+      </div>
+
+      <div class="row2">
+        <span class="l">Discord</span>
+        <span class="r">_kris3dlab_</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span><span class="brand">Kris3DLab</span> — grafikai portfólió</span>
+  <span>minden munka saját készítésű</span>
+</footer>
+
+<section id="contact">
+  <div class="section-head" style="margin-top:20px;">
+    <span class="num">03</span>
+    <h2>Kapcsolat</h2>
+    <div class="rule"></div>
+  </div>
+
+  <div style="
+    max-width:1280px;
+    margin:0 auto;
+    padding:0 8vw;
+  ">
+    <div style="
+      border:1px solid var(--line);
+      background:var(--bg-panel);
+      border-radius:10px;
+      padding:28px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:25px;
+      flex-wrap:wrap;
+    ">
+      <div>
+        <div style="
+          font-family:var(--mono);
+          font-size:11px;
+          color:var(--green);
+          letter-spacing:.12em;
+          text-transform:uppercase;
+          margin-bottom:8px;
+        ">
+          Megbízásokat keresek
+        </div>
+
+        <div style="
+          font-size:22px;
+          font-weight:600;
+        ">
+          Szeretnél egy hasonló grafikát?
+        </div>
+
+        <div style="
+          color:var(--ink-dim);
+          margin-top:7px;
+          font-size:14px;
+        ">
+          Írj rám Discordon, és beszéljük meg a részleteket.
+        </div>
+      </div>
+
+      <span style="
+        display:inline-flex;
+        align-items:center;
+        gap:10px;
+        padding:12px 18px;
+        border:1px solid var(--green-dim);
+        border-radius:8px;
+        color:var(--green);
+        font-family:var(--mono);
+        font-size:12px;
+        user-select: all;
+        cursor: default;
+        transition:.2s;"
+        onmouseover="this.style.background='rgba(99,255,182,.08)'"
+        onmouseout="this.style.background='transparent'">
+        Discord: _kris3dlab_
+      </span>
+    </div>
+  </div>
+</section>
+
+<script>
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+
+</body>
+</html>
